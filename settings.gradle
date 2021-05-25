@@ -1,2 +1,5 @@
 rootProject.name = "study"
 include ':app'
+include ':common'
+include ':order'
+include ':personal'

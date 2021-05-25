@@ -1,0 +1,40 @@
+// 把一些公用的，共用的，可扩展的，加入到这里面来
+// 整个App项目的Gradle配置文件
+// ext 自定义增加我们的内容
+
+ext {
+    usename = "Derry"
+
+    // 开发环境 / 生产环境（测试/正式）
+    isRelease = true
+
+    // 建立Map存储，对象名、key都可以自定义，groovy糖果语法，非常灵活
+    app_android = [
+            compileSdkVersion        : 28,
+            buildToolsVersion        : "29.0.0",
+
+            applicationId            : "com.xiangxue.new_modular_gradle",
+            minSdkVersion            : 15,
+            targetSdkVersion         : 28,
+            versionCode              : 1,
+            versionName              : "1.0",
+            testInstrumentationRunner: "androidx.test.runner.AndroidJUnitRunner"
+    ]
+
+    appId = ["app"     : "com.xiangxue.new_modular_interaction",
+             "order"   : "com.xiangxue.order",
+             "personal": "com.xiangxue.personal"]
+    //  测试环境，正式环境 URL
+    url = [
+            "debug"  : "https://11.22.33.44/debug",
+            "release": "https://11.22.33.44/release"
+    ]
+
+    // 依赖相关的
+    app_implementation = [
+            "appcompat": "androidx.appcompat:appcompat:1.1.0",
+            "junit"    : "junit:junit:4.12",
+            "runner"   : "androidx.test:runner:1.2.0",
+            "espresso" : "androidx.test.espresso:espresso-core:3.2.0"
+    ]
+}
