@@ -10,12 +10,12 @@ ext {
 
     // 建立Map存储，对象名、key都可以自定义，groovy糖果语法，非常灵活
     app_android = [
-            compileSdkVersion        : 28,
-            buildToolsVersion        : "29.0.0",
+            compileSdkVersion        : 30,
+            buildToolsVersion        : "30.0.3",
 
-            applicationId            : "com.xiangxue.new_modular_gradle",
-            minSdkVersion            : 15,
-            targetSdkVersion         : 28,
+            applicationId            : "com.lxh.study",
+            minSdkVersion            : 16,
+            targetSdkVersion         : 30,
             versionCode              : 1,
             versionName              : "1.0",
             testInstrumentationRunner: "androidx.test.runner.AndroidJUnitRunner"
@@ -32,9 +32,12 @@ ext {
 
     // 依赖相关的
     app_implementation = [
-            "appcompat": "androidx.appcompat:appcompat:1.1.0",
-            "junit"    : "junit:junit:4.12",
-            "runner"   : "androidx.test:runner:1.2.0",
-            "espresso" : "androidx.test.espresso:espresso-core:3.2.0"
+            "appcompat"       : "androidx.appcompat:appcompat:1.2.0",
+            "material"        : "com.google.android.material:material:1.2.1",
+            "constraintlayout": "androidx.constraintlayout:constraintlayout:2.0.1",
+            "javapoet"        : "com.squareup:javapoet:1.13.0",
+            "junit"           : "junit:junit:4.+",
+            "runner"          : "androidx.test:runner:1.1.2",
+            "espresso"        : "androidx.test.espresso:espresso-core:3.3.0"
     ]
 }
