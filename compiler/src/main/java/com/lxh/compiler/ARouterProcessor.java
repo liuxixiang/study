@@ -2,8 +2,10 @@ package com.lxh.compiler;
 
 import com.google.auto.service.AutoService;
 import com.lxh.arouter_annotations.ARouter;
+import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.JavaFile;
 import com.squareup.javapoet.MethodSpec;
+import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
 
 import java.io.IOException;
@@ -66,10 +68,54 @@ public class ARouterProcessor extends AbstractProcessor {
         // 获取被 ARouter注解的 "类节点信息"
         Set<? extends Element> elements = roundEnvironment.getElementsAnnotatedWith(ARouter.class);
         for (Element element : elements) {// for 3    // 1 element == MainActivity    2 element == MainActivity2
-
+            processARouter(element);
 
         }
         return true;
+    }
+
+    private void processARouter(Element element) {
+        /**
+         模板：
+         public class MainActivity3$$$$$$$$$ARouter {
+
+         public static Class findTargetClass(String path) {
+         return path.equals("/app/MainActivity3") ? MainActivity3.class : null;
+         }
+
+         }
+         */
+
+        // 包信息
+        String packageName = elementTool.getPackageOf(element).getQualifiedName().toString();
+        // 获取简单类名，例如：MainActivity  MainActivity2  MainActivity3
+        String className = element.getSimpleName().toString();
+        messager.printMessage(Diagnostic.Kind.NOTE, "被@ARetuer注解的类有：" + className);
+        // 目标：要生成的文件名称  MainActivity$$$$$$$$$ARouter
+        String finalClassName = className + "$$$$$$$$$ARouter";
+        ARouter aRouter = element.getAnnotation(ARouter.class);
+
+        // 1.方法
+        MethodSpec findTargetClass = MethodSpec.methodBuilder("findTargetClass")
+                .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
+                .returns(Class.class)
+                .addParameter(String.class, "path")
+                .addStatement("return path.equals($S) ? $T.class : null", aRouter.path(), element)
+                .build();
+        // 2.类
+        TypeSpec myClass = TypeSpec.classBuilder(finalClassName)
+                .addMethod(findTargetClass)
+                .addModifiers(Modifier.PUBLIC)
+                .build();
+        // 3.包
+        JavaFile packagef = JavaFile.builder(packageName, myClass).build();
+        // 开始生成
+        try {
+            packagef.writeTo(filer);
+        } catch (IOException e) {
+            e.printStackTrace();
+            messager.printMessage(Diagnostic.Kind.NOTE, "生成" + finalClassName + "文件时失败，异常:" + e.getMessage());
+        }
     }
 
     private void processMain() {
