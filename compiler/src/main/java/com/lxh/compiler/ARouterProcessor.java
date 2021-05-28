@@ -2,14 +2,11 @@ package com.lxh.compiler;
 
 import com.google.auto.service.AutoService;
 import com.lxh.arouter_annotations.ARouter;
-import com.squareup.javapoet.ClassName;
-import com.squareup.javapoet.JavaFile;
-import com.squareup.javapoet.MethodSpec;
-import com.squareup.javapoet.TypeName;
-import com.squareup.javapoet.TypeSpec;
+import com.lxh.arouter_annotations.bean.RouterBean;
 
-import java.io.IOException;
-import java.lang.reflect.Type;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import javax.annotation.processing.AbstractProcessor;
@@ -23,25 +20,44 @@ import javax.annotation.processing.SupportedOptions;
 import javax.annotation.processing.SupportedSourceVersion;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.Element;
-import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.util.Elements;
+import javax.lang.model.util.Types;
 import javax.tools.Diagnostic;
 
+import utils.ProcessorConfig;
+
+// AutoService则是固定的写法，加个注解即可
+// 通过auto-service中的@AutoService可以自动生成AutoService注解处理器，用来注册
+// 用来生成 META-INF/services/javax.annotation.processing.Processor 文件
 @AutoService(Processor.class)
-@SupportedAnnotationTypes({"com.lxh.arouter_annotations.ARouter"})
+// 允许/支持的注解类型，让注解处理器处理
+@SupportedAnnotationTypes({ProcessorConfig.AROUTER_PACKAGE})
+// 指定JDK编译版本
 @SupportedSourceVersion(SourceVersion.RELEASE_7)// 环境的版本
-// 接收 安卓工程传递过来的参数
-@SupportedOptions("student")
+// 注解处理器接收的参数
+@SupportedOptions({ProcessorConfig.OPTIONS, ProcessorConfig.APT_PACKAGE})
 public class ARouterProcessor extends AbstractProcessor {
     // 操作Element的工具类（类，函数，属性，其实都是Element）
     private Elements elementTool;
     // type(类信息)的工具类，包含用于操作TypeMirror的工具方法
-    private Type typeTool;
+    private Types typeTool;
     // Message用来打印 日志相关信息
     private Messager messager;
     // 文件生成器， 类 资源 等，就是最终要生成的文件 是需要Filer来完成的
     private Filer filer;
+    // 各个模块传递过来的模块名 例如：app order personal
+    private String options;
+    // 各个模块传递过来的目录 用于统一存放 apt生成的文件
+    private String aptPackage;
+
+    // 仓库一 Path  缓存一
+    // Map<"personal", List<RouterBean>>
+    private Map<String, List<RouterBean>> mAllPathMap = new HashMap<>(); // 目前是一个
+
+    // 仓库二 Group 缓存二
+    // Map<"personal", "ARouter$$Path$$personal.class">
+    private Map<String, String> mAllGroupMap = new HashMap<>();
 
     @Override
     public synchronized void init(ProcessingEnvironment processingEnv) {
@@ -49,108 +65,38 @@ public class ARouterProcessor extends AbstractProcessor {
         elementTool = processingEnv.getElementUtils();
         messager = processingEnv.getMessager();
         filer = processingEnv.getFiler();
-        String value = processingEnv.getOptions().get("student");
-        // 这个代码已经下毒了
-        // 如果我想在注解处理器里面抛出异常 可以使用Diagnostic.Kind.ERROR
-        messager.printMessage(Diagnostic.Kind.NOTE, ">>>>>>>>>>>>>>>>>>>>>>" + value);
+        typeTool = processingEnv.getTypeUtils();
+        // 只有接受到 App壳 传递过来的数据，才能证明我们的 APT环境搭建完成
+        options = processingEnv.getOptions().get(ProcessorConfig.OPTIONS);
+        aptPackage = processingEnv.getOptions().get(ProcessorConfig.APT_PACKAGE);
+        messager.printMessage(Diagnostic.Kind.NOTE, ">>>>>>>>>>>>>>>>>>>>>> options:" + options);
+        messager.printMessage(Diagnostic.Kind.NOTE, ">>>>>>>>>>>>>>>>>>>>>> aptPackage:" + aptPackage);
+        if (options != null && aptPackage != null) {
+            messager.printMessage(Diagnostic.Kind.NOTE, "APT 环境搭建完成....");
+        } else {
+            messager.printMessage(Diagnostic.Kind.NOTE, "APT 环境有问题，请检查 options 与 aptPackage 为null...");
+        }
+
     }
 
-    // 服务：在编译的时候干活
-    // 坑：如果没有在任何地方使用，次函数是不会工作的
+    /**
+     * 相当于main函数，开始处理注解
+     * 注解处理器的核心方法，处理具体的注解，生成Java文件
+     *
+     * @param set              使用了支持处理注解的节点集合
+     * @param roundEnvironment 当前或是之前的运行环境,可以通过该对象查找的注解。
+     * @return true 表示后续处理器不会再处理（已经处理完成）
+     */
     @Override
     public boolean process(Set<? extends TypeElement> set, RoundEnvironment roundEnvironment) {
-        // 这个代码已经下毒了
-        messager.printMessage(Diagnostic.Kind.NOTE, ">>>>>>> Derry run...");
         if (set.isEmpty()) {
-            return false;
+            messager.printMessage(Diagnostic.Kind.NOTE, "并没有发现 被@ARouter注解的地方呀");
+            return false; // 没有机会处理
         }
-        processMain();
-        // 获取被 ARouter注解的 "类节点信息"
         Set<? extends Element> elements = roundEnvironment.getElementsAnnotatedWith(ARouter.class);
-        for (Element element : elements) {// for 3    // 1 element == MainActivity    2 element == MainActivity2
-            processARouter(element);
+        for (Element element : elements) {
 
         }
-        return true;
-    }
-
-    private void processARouter(Element element) {
-        /**
-         模板：
-         public class MainActivity3$$$$$$$$$ARouter {
-
-         public static Class findTargetClass(String path) {
-         return path.equals("/app/MainActivity3") ? MainActivity3.class : null;
-         }
-
-         }
-         */
-
-        // 包信息
-        String packageName = elementTool.getPackageOf(element).getQualifiedName().toString();
-        // 获取简单类名，例如：MainActivity  MainActivity2  MainActivity3
-        String className = element.getSimpleName().toString();
-        messager.printMessage(Diagnostic.Kind.NOTE, "被@ARetuer注解的类有：" + className);
-        // 目标：要生成的文件名称  MainActivity$$$$$$$$$ARouter
-        String finalClassName = className + "$$$$$$$$$ARouter";
-        ARouter aRouter = element.getAnnotation(ARouter.class);
-
-        // 1.方法
-        MethodSpec findTargetClass = MethodSpec.methodBuilder("findTargetClass")
-                .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
-                .returns(Class.class)
-                .addParameter(String.class, "path")
-                .addStatement("return path.equals($S) ? $T.class : null", aRouter.path(), element)
-                .build();
-        // 2.类
-        TypeSpec myClass = TypeSpec.classBuilder(finalClassName)
-                .addMethod(findTargetClass)
-                .addModifiers(Modifier.PUBLIC)
-                .build();
-        // 3.包
-        JavaFile packagef = JavaFile.builder(packageName, myClass).build();
-        // 开始生成
-        try {
-            packagef.writeTo(filer);
-        } catch (IOException e) {
-            e.printStackTrace();
-            messager.printMessage(Diagnostic.Kind.NOTE, "生成" + finalClassName + "文件时失败，异常:" + e.getMessage());
-        }
-    }
-
-    private void processMain() {
-        /**
-         模块一
-         package com.example.helloworld;
-
-         public final class HelloWorld {
-
-         public static void main(String[] args) {
-         System.out.println("Hello, JavaPoet!");
-         }
-         }
-
-         */
-        // 1.方法
-        MethodSpec mainMethod = MethodSpec.methodBuilder("main")
-                .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
-                .returns(void.class)
-                .addParameter(String[].class, "args")
-                // 增加main方法里面的内容
-                .addStatement("$T.out.println($S)", System.class, "Hello, JavaPoet!")
-                .build();
-        //2.类
-        TypeSpec testClass = TypeSpec.classBuilder("LxhTest")
-                .addMethod(mainMethod)
-                .addModifiers(Modifier.PUBLIC, Modifier.FINAL).build();
-        //3.包
-        JavaFile packagef = JavaFile.builder("com.lxh.test", testClass).build();
-        // 生成文件
-        try {
-            packagef.writeTo(filer);
-        } catch (IOException e) {
-            e.printStackTrace();
-            messager.printMessage(Diagnostic.Kind.NOTE, "生成Test文件时失败，异常:" + e.getMessage());
-        }
+        return false;
     }
 }
