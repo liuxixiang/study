@@ -13,7 +13,6 @@ def url = rootProject.ext.url;
 
 android {
     compileSdkVersion app_android.compileSdkVersion
-    buildToolsVersion app_android.buildToolsVersion
 
     defaultConfig {
         applicationId app_android.applicationId

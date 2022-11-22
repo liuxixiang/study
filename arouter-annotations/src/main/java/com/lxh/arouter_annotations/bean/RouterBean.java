@@ -1,2 +1,4 @@
-package com.lxh.arouter_annotations.bean;public class RouterBean {
+package com.lxh.arouter_annotations.bean;
+
+public class RouterBean {
 }

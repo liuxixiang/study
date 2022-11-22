@@ -1,3 +1,8 @@
+plugins {
+    id 'org.jetbrains.kotlin.android'
+    id 'kotlin-kapt'
+
+}
 if (isRelease) { // 如果是发布版本时，各个模块都不能独立运行
     apply plugin: 'com.android.library'
 } else {
@@ -8,7 +13,6 @@ def app_android = this.rootProject.ext.app_android
 
 android {
     compileSdkVersion app_android.compileSdkVersion
-    buildToolsVersion app_android.buildToolsVersion
 
     defaultConfig {
         if (!isRelease) { // 如果是集成化模式，不能有applicationId
@@ -61,6 +65,7 @@ dependencies {
     app_implementation.each {
         k, v -> implementation v
     }
+    kapt  'com.google.auto.service:auto-service:1.0'
 
-    implementation project(":common") // 公共基础库
+    implementation project(":common")
 }

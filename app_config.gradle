@@ -10,12 +10,11 @@ ext {
 
     // 建立Map存储，对象名、key都可以自定义，groovy糖果语法，非常灵活
     app_android = [
-            compileSdkVersion        : 30,
-            buildToolsVersion        : "30.0.3",
+            compileSdkVersion        : 33,
 
             applicationId            : "com.lxh.study",
             minSdkVersion            : 16,
-            targetSdkVersion         : 30,
+            targetSdkVersion         : 33,
             versionCode              : 1,
             versionName              : "1.0",
             testInstrumentationRunner: "androidx.test.runner.AndroidJUnitRunner"

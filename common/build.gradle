@@ -1,5 +1,8 @@
 plugins {
     id 'com.android.library'
+    id 'org.jetbrains.kotlin.android'
+    id 'kotlin-kapt'
+
 }
 
 // 定义变量
@@ -7,7 +10,6 @@ def app_android = this.rootProject.ext.app_android;
 
 android {
     compileSdkVersion app_android.compileSdkVersion
-    buildToolsVersion app_android.buildToolsVersion
 
     defaultConfig {
         minSdkVersion app_android.minSdkVersion
@@ -31,7 +33,9 @@ android {
 
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
-
+    api 'androidx.core:core-ktx:1.9.0'
+    kapt  'com.google.auto.service:auto-service:1.0'
+    api 'com.google.auto.service:auto-service-annotations:1.0.1'
     app_implementation.each {
         k, v -> implementation v
     }
